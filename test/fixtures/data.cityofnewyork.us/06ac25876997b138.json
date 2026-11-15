@@ -1,0 +1,10 @@
+{
+ "request": "/resource/erm2-nwe9.json?%24limit=1000&%24order=%60%3Aid%60&%24select=%60created_date%60%2C%60borough%60%2C%60%3Aid%60&%24where=%28%28%60created_date%60+%3E%3D+%272024-01-01T00%3A00%3A00.000%27%29+AND+%28%60created_date%60+%3C+%272024-01-01T00%3A05%3A00.000%27%29%29+AND+%28%60borough%60+%3D+%27BROOKLYN%27%29",
+ "status": 200,
+ "content_type": "application/json;charset=utf-8",
+ "headers": {
+  "x-soda2-fields": "[\"created_date\",\"borough\",\":id\"]",
+  "x-soda2-types": "[\"floating_timestamp\",\"text\",\"row_identifier\"]"
+ },
+ "body": "[{\"created_date\":\"2024-01-01T00:00:20.000\",\"borough\":\"BROOKLYN\",\":id\":\"row-y2yb-wxrw~azjq\"}\n,{\"created_date\":\"2024-01-01T00:03:05.000\",\"borough\":\"BROOKLYN\",\":id\":\"row-gnng-99uz.2rzj\"}\n,{\"created_date\":\"2024-01-01T00:03:42.000\",\"borough\":\"BROOKLYN\",\":id\":\"row-vuaa-hekc_22gh\"}\n,{\"created_date\":\"2024-01-01T00:01:59.000\",\"borough\":\"BROOKLYN\",\":id\":\"row-q7ss~s2ri-2ubz\"}\n,{\"created_date\":\"2024-01-01T00:02:28.000\",\"borough\":\"BROOKLYN\",\":id\":\"row-3wtu.p6fe.q528\"}\n,{\"created_date\":\"2024-01-01T00:00:43.000\",\"borough\":\"BROOKLYN\",\":id\":\"row-9jn3_udcf-j3xj\"}\n,{\"created_date\":\"2024-01-01T00:01:34.000\",\"borough\":\"BROOKLYN\",\":id\":\"row-mxgx-jxtt_sjm3\"}\n,{\"created_date\":\"2024-01-01T00:03:11.000\",\"borough\":\"BROOKLYN\",\":id\":\"row-58jk~qh7h_ner6\"}\n,{\"created_date\":\"2024-01-01T00:03:11.000\",\"borough\":\"BROOKLYN\",\":id\":\"row-ps9j_qw88-rdfp\"}\n,{\"created_date\":\"2024-01-01T00:00:00.000\",\"borough\":\"BROOKLYN\",\":id\":\"row-y8k7.9yxs.4mst\"}]\n"
+}

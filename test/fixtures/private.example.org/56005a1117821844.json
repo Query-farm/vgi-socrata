@@ -1,0 +1,7 @@
+{
+ "request": "/api/views/abcd-1234.json",
+ "status": 200,
+ "content_type": "application/json",
+ "headers": {},
+ "body": "{\"id\": \"abcd-1234\", \"name\": \"Permits (private test dataset)\", \"columns\": [{\"fieldName\": \"permit\", \"name\": \"Permit\", \"dataTypeName\": \"text\", \"position\": 1}, {\"fieldName\": \"issued_at\", \"name\": \"Issued At\", \"dataTypeName\": \"fixed_timestamp\", \"position\": 2}, {\"fieldName\": \"fee\", \"name\": \"Fee\", \"dataTypeName\": \"money\", \"position\": 3}, {\"fieldName\": \"share\", \"name\": \"Share\", \"dataTypeName\": \"percent\", \"position\": 4}, {\"fieldName\": \"score\", \"name\": \"Score\", \"dataTypeName\": \"double\", \"position\": 5}, {\"fieldName\": \"paid\", \"name\": \"Paid\", \"dataTypeName\": \"checkbox\", \"position\": 6}, {\"fieldName\": \"contact\", \"name\": \"Contact\", \"dataTypeName\": \"phone\", \"position\": 7}, {\"fieldName\": \"area\", \"name\": \"Area\", \"dataTypeName\": \"polygon\", \"position\": 8}, {\"fieldName\": \":@computed_region_x\", \"name\": \"Region\", \"dataTypeName\": \"number\", \"position\": 9}]}"
+}

@@ -1,0 +1,10 @@
+{
+ "request": "/resource/x8fc-8rcq.json?%24limit=1000&%24order=%60%3Aid%60&%24select=%60branch_%60%2C%60website%60%2C%60location%60%2C%60%3Aid%60&%24where=starts_with%28%60branch_%60%2C+%27Ch%27%29",
+ "status": 200,
+ "content_type": "application/json;charset=utf-8",
+ "headers": {
+  "x-soda2-fields": "[\"branch_\",\"website\",\"location\",\":id\"]",
+  "x-soda2-types": "[\"text\",\"url\",\"location\",\"row_identifier\"]"
+ },
+ "body": "[{\"branch_\":\"Chicago Bee\",\"website\":{\"url\":\"https://www.chipublib.org/locations/18/\"},\"location\":{\"latitude\":\"41.82824306445502\",\"longitude\":\"-87.6263495444489\",\"human_address\":\"{\\\"address\\\": \\\"\\\", \\\"city\\\": \\\"\\\", \\\"state\\\": \\\"\\\", \\\"zip\\\": \\\"\\\"}\"},\":id\":\"row-vs2t-8prj~z4j9\"}\n,{\"branch_\":\"Chicago Lawn\",\"website\":{\"url\":\"https://www.chipublib.org/locations/19/\"},\"location\":{\"latitude\":\"41.7819767986214\",\"longitude\":\"-87.7033680880769\",\"human_address\":\"{\\\"address\\\": \\\"\\\", \\\"city\\\": \\\"\\\", \\\"state\\\": \\\"\\\", \\\"zip\\\": \\\"\\\"}\"},\":id\":\"row-kay7-9j48-8njf\"}\n,{\"branch_\":\"Chinatown\",\"website\":{\"url\":\"https://www.chipublib.org/locations/20/\"},\"location\":{\"latitude\":\"41.85412074173438\",\"longitude\":\"-87.63195792246246\",\"human_address\":\"{\\\"address\\\": \\\"\\\", \\\"city\\\": \\\"\\\", \\\"state\\\": \\\"\\\", \\\"zip\\\": \\\"\\\"}\"},\":id\":\"row-r3jb.s32i_4xr2\"}]\n"
+}

@@ -1,9 +1,9 @@
 [project]
 name = "vgi-socrata-worker"
 version = "0.1.0"
-description = "A VGI worker for DuckDB, generated from the Query.Farm VGI starter template."
+description = "Any Socrata (Tyler Data & Insights) open-data portal as DuckDB SQL, with SoQL pushdown."
 readme = "README.md"
-license = "MIT-0"
+license = "0BSD"
 license-files = ["LICENSE"]
 requires-python = ">=3.13"
 dependencies = [

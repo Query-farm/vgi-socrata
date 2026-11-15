@@ -1,0 +1,10 @@
+{
+ "request": "/resource/ijzp-q8t2.json?%24limit=1000&%24order=%60%3Aid%60&%24select=%60date%60%2C%60ward%60%2C%60%3Aid%60&%24where=%28%28%60date%60+%3E%3D+%272024-01-01T00%3A00%3A00.000%27%29+AND+%28%60date%60+%3C+%272024-01-01T00%3A20%3A00.000%27%29%29+AND+%28%60ward%60+IN+%283%2C+42%29%29",
+ "status": 200,
+ "content_type": "application/json;charset=utf-8",
+ "headers": {
+  "x-soda2-fields": "[\"date\",\"ward\",\":id\"]",
+  "x-soda2-types": "[\"floating_timestamp\",\"number\",\"row_identifier\"]"
+ },
+ "body": "[{\"date\":\"2024-01-01T00:00:00.000\",\"ward\":\"3\",\":id\":\"row-m749.agqx_it85\"}\n,{\"date\":\"2024-01-01T00:00:00.000\",\"ward\":\"42\",\":id\":\"row-5iyh-vbp4~2gx9\"}\n,{\"date\":\"2024-01-01T00:01:00.000\",\"ward\":\"42\",\":id\":\"row-2rek.d9qs-ue76\"}\n,{\"date\":\"2024-01-01T00:00:00.000\",\"ward\":\"3\",\":id\":\"row-cgvy.qhyy.c3mx\"}\n,{\"date\":\"2024-01-01T00:00:00.000\",\"ward\":\"3\",\":id\":\"row-rr8r~jnhm~dk3m\"}]\n"
+}

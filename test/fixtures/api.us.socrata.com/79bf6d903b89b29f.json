@@ -1,0 +1,7 @@
+{
+ "request": "/api/catalog/v1?domains=opendata.rdw.nl&limit=100&only=dataset&search_context=opendata.rdw.nl",
+ "status": 404,
+ "content_type": "application/json",
+ "headers": {},
+ "body": "{\"error\":\"Domain not found: opendata.rdw.nl\"}"
+}

@@ -23,9 +23,21 @@ SOURCE_URL = "https://github.com/Query-farm/vgi-socrata"
 # Categories group functions in docs and agent tools. Every object's
 # ``vgi.category`` must name one of these.
 SCHEMA_CATEGORIES = [
-    {"name": "text", "title": "Text", "description": "Functions that build or transform strings."},
-    {"name": "generators", "title": "Generators", "description": "Table functions that generate rows."},
-    {"name": "api", "title": "REST APIs", "description": "Table functions that read from HTTP APIs."},
+    {
+        "name": "catalog",
+        "title": "Catalog & Schema",
+        "description": "Find datasets on one portal or across all portals, and list a dataset's columns.",
+    },
+    {
+        "name": "data",
+        "title": "Dataset Data",
+        "description": "Read dataset rows with SoQL pushdown, or run server-side SoQL aggregations.",
+    },
+    {
+        "name": "soql",
+        "title": "SoQL Helpers",
+        "description": "Quote and escape values for hand-written SoQL conditions and queries.",
+    },
 ]
 
 
@@ -52,78 +64,125 @@ def column(name: str, type_: pa.DataType, comment: str, *, nullable: bool = True
     return pa.field(name, type_, nullable=nullable, metadata={b"comment": comment.encode()})
 
 
+def result_columns(fields: list[pa.Field[Any]]) -> str:
+    """Return the ``vgi.result_columns_schema`` JSON for a fixed output schema."""
+    from .soql import duckdb_type_name
+
+    return json.dumps(
+        [
+            {
+                "name": f.name,
+                "type": duckdb_type_name(f.type),
+                "description": (f.metadata or {}).get(b"comment", b"").decode(),
+            }
+            for f in fields
+        ]
+    )
+
+
+CATALOG_COMMENT = (
+    "Any Socrata (Tyler Data & Insights) open-data portal as SQL: search portal catalogs and read typed "
+    "dataset rows, with filters, projections and aggregates pushed down as SoQL. No key needed for public data."
+)
+
 CATALOG_DOC_LLM = (
-    "An example VGI worker generated from the Query.Farm starter template. It shows the three "
-    "shapes most workers need: a vectorized scalar function with an overload, a deterministic "
-    "table function with a named default argument, and a table function that pages through a REST "
-    "API with retries and an optional bearer token taken from a DuckDB secret or an environment "
-    "variable. Replace them with your own functions; keep the metadata complete so agents can "
-    "discover and call them."
+    "Query any Socrata (Tyler Data & Insights) open-data portal through its SODA 2.1 API: thousands of US "
+    "state, county and city portals such as data.cityofnewyork.us, data.cityofchicago.org, data.wa.gov and "
+    "data.cdc.gov, and European ones such as opendata.rdw.nl. Every dataset has a four-by-four id such as "
+    "'erm2-nwe9' (the end of its page URL). Every function takes the portal (a domain such as "
+    "'data.cityofnewyork.us', or a URL) as its first argument, and most take the dataset id. Typical flow: "
+    "find datasets on a portal with datasets(portal, q := ...) (or across every portal with "
+    "search_datasets(q)), inspect a dataset's field names and types with dataset_columns(portal, id), then "
+    "read rows with dataset(portal, id) and ordinary SQL: WHERE filters, selected columns, count(*) and "
+    "ORDER BY <number or timestamp> LIMIT n are translated into SoQL so only matching rows travel, and rows "
+    "are paged with a keyset cursor on the system :id column. For GROUP BY summaries of big datasets send a "
+    "SoQL query to the portal with soql(portal, id, 'SELECT ... GROUP BY ...'). Column types are real DuckDB "
+    "types: numbers `DECIMAL(28,10)`, calendar dates `TIMESTAMP`, checkboxes `BOOLEAN`, points GeoJSON `JSON`, "
+    "locations and URLs `STRUCT`. Public data needs no credentials; an app token raises the throttling "
+    "limit and is given as a secret scoped to the portal:\n\n"
+    "```sql\nCREATE SECRET (TYPE socrata, APP_TOKEN '...', SCOPE 'https://data.cityofnewyork.us');\n```\n\n"
+    "Catalog columns portal, dataset_id, title, description, publisher, modified and url match the CKAN and "
+    "Opendatasoft workers so catalogs from several portal platforms can be combined with UNION ALL BY NAME."
 )
 
 CATALOG_DOC_MD = (
-    "# VGI socrata worker\n\n"
-    "**An example [VGI](https://query.farm/vgi) worker that brings custom functions into DuckDB "
-    "SQL.** It was generated from the Query.Farm starter template and is meant to be renamed and "
-    "rewritten: every function here demonstrates one pattern you will reuse, from vectorized "
-    "scalars and streaming table functions to a REST API reader that retries politely and reads "
-    "a bearer token from a DuckDB secret or the environment.\n\n"
-    "The worker speaks Apache Arrow to DuckDB over stdin/stdout, a Unix socket, or HTTP, so the "
-    "same code runs as a local subprocess or a hosted service. See the "
-    "[VGI documentation](https://query.farm/vgi/docs/) to learn more."
+    "# Socrata open-data portals in DuckDB\n\n"
+    "Query **any Socrata (Tyler Data & Insights) open-data portal** with SQL: New York City, Chicago, "
+    "Washington State, the CDC and thousands more US and European government portals. No key is needed for "
+    "public data.\n\n"
+    "Filters, projections, `count(*)` and `ORDER BY ... LIMIT` run on the portal as SoQL, rows are paged "
+    "with a resumable keyset cursor, and aggregations can run server-side. Columns get real DuckDB types, "
+    "including timestamps, decimals, booleans, GeoJSON points and location structs."
 )
 
 SCHEMA_DOC_LLM = (
-    "The `main` schema holds the starter template's example functions, one per common worker "
-    "pattern. `greet(name)` and `greet(name, style)` are vectorized scalars: use them inside a "
-    "projection or predicate, one result per row; `style` is a constant that must be 'casual' or "
-    "'formal'. `sequence_table(count, step := 1)` is a deterministic table function that returns "
-    "`count` rows of `(n, squared)`; use it for demos, tests, and as a template for generators. "
-    "`fetch_items(base_url, page_size := 100)` reads every item from a paginated JSON REST API as "
-    "`(id, name, category, price)` rows, streaming one page per batch, retrying rate-limited "
-    "requests, and authenticating with a `socrata_api` DuckDB secret or the `SOCRATA_API_TOKEN` "
-    "environment variable. Scalars cannot take named arguments; table functions can."
+    "The `main` schema holds every function. Catalog: datasets(portal, q :=, category :=, tag :=) lists one "
+    "portal's datasets from the Discovery API; search_datasets(q, region :=) searches every US (or EU) "
+    "portal; dataset_columns(portal, dataset_id) lists field names and types. Data: dataset(portal, "
+    "dataset_id, soql_where :=, page_rows :=) reads typed rows with SoQL pushdown; soql(portal, dataset_id, "
+    "query) runs a full SoQL SELECT/GROUP BY on the portal. SoQL helpers: soql_quote(value) and "
+    "soql_like_escape(text) build safe hand-written SoQL. `portal` is a domain such as "
+    "'data.cityofnewyork.us'; dataset ids are four-by-fours such as 'erm2-nwe9'. Look up field names before "
+    "filtering (display names differ from field names); filter in SQL so the portal does the work."
 )
 
 SCHEMA_DOC_MD = (
     "## main\n\n"
-    "The starter template's example functions, one per common worker pattern.\n\n"
-    "- **Scalars** answer one question per row and slot into a projection or predicate.\n"
-    "- **Table functions** return sets of rows, streamed to DuckDB in Arrow batches.\n"
-    "- **REST readers** page through an HTTP API and authenticate with a DuckDB secret."
+    "Everything this worker offers lives in one schema, grouped in three categories.\n\n"
+    "**Catalog** functions search one portal's datasets or every portal at once through the Socrata "
+    "Discovery API, and list a dataset's columns with the DuckDB type each one gets.\n\n"
+    "**Data** functions read a dataset's rows with filters, projections and Top-N sorts pushed to the "
+    "portal as SoQL, or run a SoQL aggregate on the portal and return only the summary.\n\n"
+    "**SoQL helpers** quote values for hand-written SoQL."
 )
 
 AGENT_TEST_TASKS = [
-    {"name": "formal_greeting", "prompt": "Using the socrata worker, greet the name 'Grace' formally."},
     {
-        "name": "sum_of_squares",
-        "prompt": "Using the socrata worker, what is the sum of the squared column for the first 10 rows "
-        "of the sequence with the default step?",
-    },
-    {
-        "name": "stepped_sequence",
-        "prompt": "List the n values of a 4-row sequence that steps by 5, in ascending order.",
-    },
-    {
-        "name": "items_per_category",
+        "name": "nyc_311_dataset_id",
         "prompt": (
-            "The items API is running at https://vgi-starter-api.query-farm.services/v1. "
-            "How many items does it have in each category?"
+            "Using the Socrata worker, what is the dataset id (four-by-four) of the NYC '311 Service Requests "
+            "from 2020 to Present' dataset on data.cityofnewyork.us?"
         ),
+    },
+    {
+        "name": "nyc_311_brooklyn_first_minutes",
+        "prompt": (
+            "In NYC 311 service requests (dataset erm2-nwe9 on data.cityofnewyork.us), how many requests from "
+            "the borough BROOKLYN were created in the first five minutes of 2024 (created_date from "
+            "2024-01-01 00:00:00 inclusive to 00:05:00 exclusive)?"
+        ),
+    },
+    {
+        "name": "chicago_library_count",
+        "prompt": (
+            "How many Chicago Public Library branches are listed in the dataset x8fc-8rcq on data.cityofchicago.org?"
+        ),
+    },
+    {
+        "name": "nyc_311_created_date_type",
+        "prompt": (
+            "What Socrata data type does the column created_date have in dataset erm2-nwe9 on data.cityofnewyork.us?"
+        ),
+    },
+    {
+        "name": "quote_literal",
+        "prompt": "Quote the text O'Brien as a SoQL string literal with the Socrata worker.",
     },
 ]
 
 CATALOG_TAGS = {
-    "vgi.title": "VGI Socrata Worker",
-    "vgi.subtitle": "Example DuckDB functions to rename and replace: a scalar, a table function and a REST API reader.",
+    "vgi.title": "Socrata Open Data",
+    "vgi.subtitle": "Any Socrata (Tyler Data & Insights) portal's catalog and datasets as SQL, with SoQL pushdown.",
     "vgi.doc_llm": CATALOG_DOC_LLM,
     "vgi.doc_md": CATALOG_DOC_MD,
     "vgi.source_url": SOURCE_URL,
     "vgi.icon_url": "https://query.farm/media-kit/products/vgi/vgi-logo.png",
     "vgi.license": "0BSD",
     "vgi.author": "Query.Farm",
-    "vgi.copyright": "Copyright 2026 Query.Farm LLC",
-    "vgi.keywords": keywords_array("vgi, duckdb, starter template, example worker, rest api, table function"),
+    "vgi.copyright": "Copyright 2026 Query Farm LLC - https://query.farm",
+    "vgi.keywords": keywords_array(
+        "socrata, tyler data & insights, soda, soql, open data, government data, city data, 311, catalog, duckdb"
+    ),
     "vgi.support_contact": f"{SOURCE_URL}/issues",
     "vgi.support_policy_url": f"{SOURCE_URL}#support",
     # Public analyst tasks for `vgi-lint simulate`; private graders live in vgi-agent-tests.yaml.

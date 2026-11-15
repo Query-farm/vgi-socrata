@@ -4,7 +4,9 @@
 HAYBARN_VERSION ?= 2.0.0rc11
 # vgi-lint is deliberately not pinned: the gate tracks the current quality bar.
 VGI_LINT        := uvx --prerelease=allow --from 'vgi-lint-check>=2,<3' vgi-lint lint
-LINT_ARGS       ?=
+# Examples read live Socrata portals, so the default gate is static (as in CI).
+# Run them live with: make lint-explain LINT_ARGS=
+LINT_ARGS       ?= --no-execute
 WORKER          := $(CURDIR)/.venv/bin/vgi-socrata-worker
 TOOLS           := $(CURDIR)/.tools
 HAYBARN_UNITTEST := $(TOOLS)/bin/haybarn-unittest
@@ -61,7 +63,7 @@ run-http: build ## Serve over HTTP on port 8000
 	$(WORKER) --http --host 127.0.0.1 --port 8000
 
 debug: build tools ## Run one query against the worker with debug logging on stderr
-	@printf "LOAD vgi;\nATTACH 'socrata' (TYPE vgi, LOCATION '$(WORKER) --debug');\nSELECT socrata.main.greet('debug');\n" \
+	@printf "LOAD vgi;\nATTACH 'socrata' (TYPE vgi, LOCATION '$(WORKER) --debug');\nSELECT socrata.main.soql_quote('debug');\n" \
 	  | uvx --from haybarn-cli==$(HAYBARN_VERSION) haybarn -no-agent
 
 template-diff: ## Show upstream template changes since this project was created

@@ -1,0 +1,10 @@
+{
+ "request": "/resource/erm2-nwe9.json?%24limit=4&%24order=%60%3Aid%60&%24select=%60created_date%60%2C%60borough%60%2C%60unique_key%60%2C%60complaint_type%60%2C%60location%60%2C%60%3Aid%60&%24where=%28%28%60created_date%60+%3E%3D+%272024-01-01T00%3A00%3A00.000%27%29+AND+%28%60created_date%60+%3C+%272024-01-01T00%3A05%3A00.000%27%29%29+AND+%28%60borough%60+%3D+%27BROOKLYN%27%29",
+ "status": 200,
+ "content_type": "application/json;charset=utf-8",
+ "headers": {
+  "x-soda2-fields": "[\"created_date\",\"borough\",\"unique_key\",\"complaint_type\",\"location\",\":id\"]",
+  "x-soda2-types": "[\"floating_timestamp\",\"text\",\"text\",\"text\",\"point\",\"row_identifier\"]"
+ },
+ "body": "[{\"created_date\":\"2024-01-01T00:00:20.000\",\"borough\":\"BROOKLYN\",\"unique_key\":\"59887043\",\"complaint_type\":\"Illegal Fireworks\",\"location\":{\"type\":\"Point\",\"coordinates\":[-74.014496510071,40.627094135497]},\":id\":\"row-y2yb-wxrw~azjq\"}\n,{\"created_date\":\"2024-01-01T00:03:05.000\",\"borough\":\"BROOKLYN\",\"unique_key\":\"59887047\",\"complaint_type\":\"Illegal Fireworks\",\"location\":{\"type\":\"Point\",\"coordinates\":[-73.973340147339,40.639267838522]},\":id\":\"row-gnng-99uz.2rzj\"}\n,{\"created_date\":\"2024-01-01T00:03:42.000\",\"borough\":\"BROOKLYN\",\"unique_key\":\"59887054\",\"complaint_type\":\"Noise - Commercial\",\"location\":{\"type\":\"Point\",\"coordinates\":[-73.905951728291,40.691762058768]},\":id\":\"row-vuaa-hekc_22gh\"}\n,{\"created_date\":\"2024-01-01T00:01:59.000\",\"borough\":\"BROOKLYN\",\"unique_key\":\"59888368\",\"complaint_type\":\"Blocked Driveway\",\"location\":{\"type\":\"Point\",\"coordinates\":[-73.8837381076,40.665224479486]},\":id\":\"row-q7ss~s2ri-2ubz\"}]\n"
+}

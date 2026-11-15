@@ -1,0 +1,10 @@
+{
+ "request": "/resource/m9d7-ebf2.json?%24limit=1000&%24order=%60%3Aid%60&%24select=%60merk%60%2C%60datum_eerste_toelating%60%2C%60handelsbenaming%60%2C%60eerste_kleur%60%2C%60%3Aid%60&%24where=%28%60merk%60+%3D+%27TESLA%27%29+AND+%28%60datum_eerste_toelating%60+%3D+20240102%29",
+ "status": 200,
+ "content_type": "application/json;charset=utf-8",
+ "headers": {
+  "x-soda2-fields": "[\"merk\",\"datum_eerste_toelating\",\"handelsbenaming\",\"eerste_kleur\",\":id\"]",
+  "x-soda2-types": "[\"text\",\"number\",\"text\",\"text\",\"row_identifier\"]"
+ },
+ "body": "[{\"merk\":\"TESLA\",\"datum_eerste_toelating\":\"20240102\",\"handelsbenaming\":\"MODEL X\",\"eerste_kleur\":\"WIT\",\":id\":\"row-tj25~ehnc~vhww\"}]\n"
+}

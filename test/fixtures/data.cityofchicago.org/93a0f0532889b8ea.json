@@ -1,0 +1,10 @@
+{
+ "request": "/resource/x8fc-8rcq.json?%24limit=1000&%24order=%60%3Aid%60&%24select=%60website%60%2C%60%3Aid%60&%24where=%60website%60+IS+NULL",
+ "status": 200,
+ "content_type": "application/json;charset=utf-8",
+ "headers": {
+  "x-soda2-fields": "[\"website\",\":id\"]",
+  "x-soda2-types": "[\"url\",\"row_identifier\"]"
+ },
+ "body": "[]\n"
+}

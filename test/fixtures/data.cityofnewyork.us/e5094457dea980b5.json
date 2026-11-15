@@ -1,0 +1,7 @@
+{
+ "request": "/api/views/zzzz-zzzz.json",
+ "status": 404,
+ "content_type": "application/json",
+ "headers": {},
+ "body": "{\n  \"code\" : \"not_found\",\n  \"error\" : true,\n  \"message\" : \"Not found\",\n  \"data\" : {\n    \"id\" : \"zzzz-zzzz\"\n  }\n}\n"
+}

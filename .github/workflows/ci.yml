@@ -97,7 +97,12 @@ jobs:
           # Set in vgi-lint.toml, so local runs and CI agree.
           fail-on: ${{ steps.lintcfg.outputs.fail_on }}
           # Set to false if your examples need real credentials or network access.
-          execute: true
+          # Every example and agent task reads live Socrata portals (data.cityofnewyork.us,
+          # data.cityofchicago.org, opendata.rdw.nl) and the Discovery API (api.us/api.eu.socrata.com),
+          # and dataset/soql bind against them; CI must not depend on third-party portals (anonymous
+          # requests are throttled). The static gate is the real gate; the SQL suite covers behaviour
+          # against recorded fixtures. Run `make lint-explain LINT_ARGS=` to execute them live.
+          execute: "false"
 
   docker:
     name: Docker image smoke test

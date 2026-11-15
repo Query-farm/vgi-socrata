@@ -1,0 +1,10 @@
+{
+ "request": "/resource/x8fc-8rcq.json?%24limit=1000&%24order=%60%3Aid%60&%24select=%60branch_%60%2C%60zip%60%2C%60%3Aid%60&%24where=starts_with%28%60branch_%60%2C+%27Al%27%29",
+ "status": 200,
+ "content_type": "application/json;charset=utf-8",
+ "headers": {
+  "x-soda2-fields": "[\"branch_\",\"zip\",\":id\"]",
+  "x-soda2-types": "[\"text\",\"text\",\"row_identifier\"]"
+ },
+ "body": "[{\"branch_\":\"Albany Park\",\"zip\":\"60625\",\":id\":\"row-jq3p~pz3b~i87b\"}\n,{\"branch_\":\"Altgeld\",\"zip\":\"60827\",\":id\":\"row-ur78~7ms9~d7jj\"}]\n"
+}

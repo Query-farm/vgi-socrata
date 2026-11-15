@@ -1,0 +1,10 @@
+{
+ "request": "/resource/erm2-nwe9.json?%24limit=1000&%24order=%60%3Aid%60&%24select=%60created_date%60%2C%60closed_date%60%2C%60%3Aid%60&%24where=%28%28%60created_date%60+%3E%3D+%272024-01-01T00%3A00%3A00.000%27%29+AND+%28%60created_date%60+%3C+%272024-01-01T00%3A05%3A00.000%27%29%29+AND+%28%60closed_date%60+IS+NULL%29",
+ "status": 200,
+ "content_type": "application/json;charset=utf-8",
+ "headers": {
+  "x-soda2-fields": "[\"created_date\",\"closed_date\",\":id\"]",
+  "x-soda2-types": "[\"floating_timestamp\",\"floating_timestamp\",\"row_identifier\"]"
+ },
+ "body": "[]\n"
+}

@@ -1,16 +1,22 @@
 # Private graders for the public vgi.agent_test_tasks in the worker's catalog metadata.
 # `vgi-lint lint --ai` runs an agent on each prompt and grades it with check_sql.
 # See https://github.com/Query-farm/vgi-lint-check (VGI920).
+# All tasks but quote_literal read live Socrata portals, so they grade with check_sql.
 tasks:
-  - name: formal_greeting
-    reference_sql: SELECT socrata.main.greet('Grace', 'formal') AS greeting
-  - name: sum_of_squares
-    reference_sql: SELECT sum(squared) AS total FROM socrata.main.sequence_table(10)
-  - name: stepped_sequence
-    reference_sql: SELECT n FROM socrata.main.sequence_table(4, step := 5) ORDER BY n
-  # Reads the public demo API (https://vgi-starter-api.query-farm.services/v1).
-  - name: items_per_category
+  - name: nyc_311_dataset_id
     check_sql: >-
-      SELECT count(*) = 3 AND sum(items) = 25
-      FROM (SELECT category, count(*) AS items
-            FROM socrata.main.fetch_items('https://vgi-starter-api.query-farm.services/v1') GROUP BY category)
+      SELECT count(*) = 1 FROM socrata.main.datasets('data.cityofnewyork.us', q := '311 service requests')
+      WHERE dataset_id = 'erm2-nwe9' AND title = '311 Service Requests from 2020 to Present'
+  - name: nyc_311_brooklyn_first_minutes
+    check_sql: >-
+      SELECT count(*) = 10 FROM socrata.main.dataset('data.cityofnewyork.us', 'erm2-nwe9')
+      WHERE created_date >= TIMESTAMP '2024-01-01 00:00:00' AND created_date < TIMESTAMP '2024-01-01 00:05:00'
+        AND borough = 'BROOKLYN'
+  - name: chicago_library_count
+    check_sql: SELECT count(*) = 82 FROM socrata.main.dataset('data.cityofchicago.org', 'x8fc-8rcq')
+  - name: nyc_311_created_date_type
+    check_sql: >-
+      SELECT data_type = 'calendar_date' FROM socrata.main.dataset_columns('data.cityofnewyork.us', 'erm2-nwe9')
+      WHERE field_name = 'created_date'
+  - name: quote_literal
+    reference_sql: SELECT socrata.main.soql_quote('O''Brien') AS literal

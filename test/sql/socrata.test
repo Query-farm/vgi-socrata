@@ -1,7 +1,14 @@
 # name: test/sql/socrata.test
-# description: SQL-level tests for the socrata worker, run through DuckDB by ci/run-integration.sh
+# description: SQL tests for the socrata worker against recorded Socrata responses
 # group: [socrata]
-# managed-by: vgi-starters (edit upstream in shared/, then run tools/render.py)
+#
+# SOCRATA_MOCK_API is test/mock_api/server.py: a strict replay server. Every request
+# must match a recorded one exactly (path + $select/$where/$order/$limit/$query ...),
+# otherwise it answers 404 and the query fails. So each query below also asserts what
+# was pushed down to the portal. The worker is pointed at it with socrata secrets whose
+# BASE_URL names a per-host prefix; results still report the real portal URLs.
+# The server also throttles every URL once (429 + Retry-After: 0), so every query
+# exercises the retry path.
 
 require vgi
 
@@ -9,140 +16,350 @@ require-env SOCRATA_WORKER
 
 require-env SOCRATA_MOCK_API
 
-require-env SOCRATA_MOCK_API_AUTH
+# JSON columns (GeoJSON geometry) need the json extension (autoloaded in a normal DuckDB).
+statement ok
+LOAD json;
 
 statement ok
 ATTACH 'socrata' (TYPE vgi, LOCATION '{SOCRATA_WORKER}');
 
-# ---------------------------------------------------------------- greet (scalar)
+statement ok
+CREATE SECRET nyc (TYPE socrata, SCOPE 'https://data.cityofnewyork.us', BASE_URL '{SOCRATA_MOCK_API}/data.cityofnewyork.us');
 
-query T
-SELECT socrata.main.greet('Ada');
+statement ok
+CREATE SECRET chi (TYPE socrata, SCOPE 'https://data.cityofchicago.org', BASE_URL '{SOCRATA_MOCK_API}/data.cityofchicago.org');
+
+statement ok
+CREATE SECRET rdw (TYPE socrata, SCOPE 'https://opendata.rdw.nl', BASE_URL '{SOCRATA_MOCK_API}/opendata.rdw.nl');
+
+statement ok
+CREATE SECRET disc_us (TYPE socrata, SCOPE 'https://api.us.socrata.com', BASE_URL '{SOCRATA_MOCK_API}/api.us.socrata.com');
+
+statement ok
+CREATE SECRET disc_eu (TYPE socrata, SCOPE 'https://api.eu.socrata.com', BASE_URL '{SOCRATA_MOCK_API}/api.eu.socrata.com');
+
+# ---------------------------------------------------------------- dataset(): keyset paging + pushdown
+
+# $select=`created_date`,`borough`,`unique_key`,`complaint_type`,`location`,`:id`
+# $where=(created_date range) AND (`borough` = 'BROOKLYN'); $order=`:id` $limit=4.
+# Ten rows = three keyset pages, each continuing with AND (`:id` > '<last :id>').
+query TTTTTT
+SELECT unique_key, created_date, complaint_type, typeof(location), location->>'$.type', soda_row_id
+FROM socrata.main.dataset('data.cityofnewyork.us', 'erm2-nwe9', page_rows := 4)
+WHERE created_date >= TIMESTAMP '2024-01-01 00:00:00' AND created_date < TIMESTAMP '2024-01-01 00:05:00'
+  AND borough = 'BROOKLYN'
+ORDER BY unique_key;
 ----
-Hi, Ada!
+59887043	2024-01-01 00:00:20	Illegal Fireworks	JSON	Point	row-y2yb-wxrw~azjq
+59887047	2024-01-01 00:03:05	Illegal Fireworks	JSON	Point	row-gnng-99uz.2rzj
+59887054	2024-01-01 00:03:42	Noise - Commercial	JSON	Point	row-vuaa-hekc_22gh
+59888368	2024-01-01 00:01:59	Blocked Driveway	JSON	Point	row-q7ss~s2ri-2ubz
+59888860	2024-01-01 00:02:28	Illegal Fireworks	JSON	Point	row-3wtu.p6fe.q528
+59888940	2024-01-01 00:00:43	Noise - Residential	JSON	Point	row-9jn3_udcf-j3xj
+59889740	2024-01-01 00:01:34	Illegal Fireworks	JSON	Point	row-mxgx-jxtt_sjm3
+59890587	2024-01-01 00:03:11	Noise - Commercial	JSON	Point	row-ps9j_qw88-rdfp
+59893330	2024-01-01 00:03:11	Illegal Fireworks	JSON	Point	row-58jk~qh7h_ner6
+59896272	2024-01-01 00:00:00	Food Poisoning	JSON	Point	row-y8k7.9yxs.4mst
 
-query T
-SELECT socrata.main.greet('Ada', 'formal');
-----
-Good day, Ada.
-
-# NULL in, NULL out.
-query T
-SELECT socrata.main.greet(NULL);
-----
-NULL
-
-# Works over a whole column, one result per row.
-query T
-SELECT socrata.main.greet(name) FROM (VALUES ('Ada'), ('Grace'), (NULL)) AS t(name) ORDER BY ALL NULLS LAST;
-----
-Hi, Ada!
-Hi, Grace!
-NULL
-
-# `style` is constrained to 'casual' | 'formal' and checked when the query is bound.
-# (No expected message: each SDK words constraint errors its own way.)
-statement error
-SELECT socrata.main.greet('Ada', 'loud');
-----
-<REGEX>:.*
-
-# ------------------------------------------------------ sequence_table (table fn)
-
-query II
-SELECT n, squared FROM socrata.main.sequence_table(4) ORDER BY n;
-----
-0	0
-1	1
-2	4
-3	9
-
-# Named argument with a default.
+# Same filter, default page size: one request.
 query I
-SELECT n FROM socrata.main.sequence_table(3, step := 5) ORDER BY n;
+SELECT count(*) FROM socrata.main.dataset('data.cityofnewyork.us', 'erm2-nwe9')
+WHERE created_date >= TIMESTAMP '2024-01-01 00:00:00' AND created_date < TIMESTAMP '2024-01-01 00:05:00'
+  AND borough = 'BROOKLYN';
 ----
-0
-5
 10
 
-# Larger than one batch: the cursor must carry across process calls.
-query II
-SELECT count(*), max(n) FROM socrata.main.sequence_table(25000);
+# IN with a literal that needs SoQL escaping: ('BRONX', 'QUEENS', 'O''Brien\\x')
+query TI
+SELECT borough, count(*) FROM socrata.main.dataset('data.cityofnewyork.us', 'erm2-nwe9')
+WHERE created_date >= TIMESTAMP '2024-01-01 00:00:00' AND created_date < TIMESTAMP '2024-01-01 00:05:00'
+  AND borough IN ('BRONX', 'QUEENS', 'O''Brien\x')
+GROUP BY ALL ORDER BY 1;
 ----
-25000	24999
+BRONX	7
+QUEENS	11
 
+# IS NULL -> `closed_date` IS NULL
 query I
-SELECT count(*) FROM socrata.main.sequence_table(0);
+SELECT count(*) FROM socrata.main.dataset('data.cityofnewyork.us', 'erm2-nwe9')
+WHERE created_date >= TIMESTAMP '2024-01-01 00:00:00' AND created_date < TIMESTAMP '2024-01-01 00:05:00'
+  AND closed_date IS NULL;
 ----
 0
 
-# count is constrained to [0, 1000000].
-statement error
-SELECT * FROM socrata.main.sequence_table(-1);
+# LIKE 'p%' -> starts_with(`complaint_type`, 'Noise')
+query TI
+SELECT complaint_type, count(*) FROM socrata.main.dataset('data.cityofnewyork.us', 'erm2-nwe9')
+WHERE created_date >= TIMESTAMP '2024-01-01 00:00:00' AND created_date < TIMESTAMP '2024-01-01 00:05:00'
+  AND complaint_type LIKE 'Noise%'
+GROUP BY ALL ORDER BY 1;
 ----
-<REGEX>:.*
+Noise - Commercial	2
+Noise - Residential	5
+Noise - Street/Sidewalk	4
 
-# Named arguments are constrained too: step >= 1.
-statement error
-SELECT * FROM socrata.main.sequence_table(3, step := 0);
+# starts_with() -> starts_with(`complaint_type`, 'Illegal')
+query I
+SELECT count(*) FROM socrata.main.dataset('data.cityofnewyork.us', 'erm2-nwe9')
+WHERE created_date >= TIMESTAMP '2024-01-01 00:00:00' AND created_date < TIMESTAMP '2024-01-01 00:05:00'
+  AND starts_with(complaint_type, 'Illegal');
 ----
-<REGEX>:.*
+8
 
-# ------------------------------------------------- fetch_items (REST table fn)
-
-query IIT
-SELECT count(*), sum(id), min(name) FROM socrata.main.fetch_items('{SOCRATA_MOCK_API}', page_size := 4);
+# ORDER BY ... LIMIT with a WHERE: DuckDB sends no order hint, so the filtered rows are
+# keyset-scanned and DuckDB sorts them.
+query TT
+SELECT unique_key, created_date FROM socrata.main.dataset('data.cityofnewyork.us', 'erm2-nwe9')
+WHERE created_date >= TIMESTAMP '2024-01-01 00:00:00' AND created_date < TIMESTAMP '2024-01-01 00:05:00'
+ORDER BY created_date DESC LIMIT 3;
 ----
-25	325	item-01
+59892610	2024-01-01 00:04:29
+59887266	2024-01-01 00:04:23
+59897462	2024-01-01 00:04:21
+
+# ---------------------------------------------------------------- dataset(): Top-N pushdown
+
+# ORDER BY <number> DESC LIMIT 3 over 8M rows -> $order=`ward` DESC,`:id` $limit=3
+# $where=`ward` IS NOT NULL: one request (anything else would be unrecorded).
+query TT
+SELECT id::BIGINT, ward::BIGINT FROM socrata.main.dataset('data.cityofchicago.org', 'ijzp-q8t2') ORDER BY ward DESC LIMIT 3;
+----
+9377133	50
+9873131	50
+10391981	50
+
+# ORDER BY <calendar_date> DESC LIMIT 3 -> $order=`date` DESC,`:id`
+query TT
+SELECT id::BIGINT, date FROM socrata.main.dataset('data.cityofchicago.org', 'ijzp-q8t2') ORDER BY date DESC LIMIT 3;
+----
+14382762	2026-11-07 00:00:00
+14383024	2026-11-07 00:00:00
+14383402	2026-11-07 00:00:00
+
+# ---------------------------------------------------------------- dataset(): types
+
+# checkbox = true -> `arrest` = true; number -> DECIMAL(28,10); location -> STRUCT
+query TTTIT
+SELECT primary_type, arrest, domestic, ward::INTEGER, typeof(ward)
+FROM socrata.main.dataset('data.cityofchicago.org', 'ijzp-q8t2')
+WHERE date >= TIMESTAMP '2024-01-01 00:00:00' AND date < TIMESTAMP '2024-01-01 00:20:00' AND arrest = true AND location IS NOT NULL
+ORDER BY id;
+----
+BATTERY	true	true	28	DECIMAL(28,10)
+BATTERY	true	true	35	DECIMAL(28,10)
+LIQUOR LAW VIOLATION	true	false	34	DECIMAL(28,10)
+NARCOTICS	true	false	27	DECIMAL(28,10)
+OFFENSE INVOLVING CHILDREN	true	true	21	DECIMAL(28,10)
+CRIMINAL SEXUAL ASSAULT	true	false	3	DECIMAL(28,10)
+OFFENSE INVOLVING CHILDREN	true	true	39	DECIMAL(28,10)
+OFFENSE INVOLVING CHILDREN	true	true	17	DECIMAL(28,10)
+OFFENSE INVOLVING CHILDREN	true	true	23	DECIMAL(28,10)
+
+# BETWEEN on a number -> (`ward` >= 20) AND (`ward` <= 30)
+query I
+SELECT count(*) FROM socrata.main.dataset('data.cityofchicago.org', 'ijzp-q8t2')
+WHERE date >= TIMESTAMP '2024-01-01 00:00:00' AND date < TIMESTAMP '2024-01-01 00:20:00' AND ward BETWEEN 20 AND 30;
+----
+66
+
+# IN on a number -> `ward` IN (3, 42)
+query I
+SELECT count(*) FROM socrata.main.dataset('data.cityofchicago.org', 'ijzp-q8t2')
+WHERE date >= TIMESTAMP '2024-01-01 00:00:00' AND date < TIMESTAMP '2024-01-01 00:20:00' AND ward IN (3, 42);
+----
+5
+
+# url -> STRUCT(url, description); location -> STRUCT(latitude, longitude, address ...)
+query TTRRTT
+SELECT branch_, website.url, round(location.latitude, 4), round(location.longitude, 4), location.address, typeof(website)
+FROM socrata.main.dataset('data.cityofchicago.org', 'x8fc-8rcq') WHERE starts_with(branch_, 'Ch') ORDER BY branch_;
+----
+Chicago Bee	https://www.chipublib.org/locations/18/	41.8282	-87.6263	NULL	STRUCT(url VARCHAR, description VARCHAR)
+Chicago Lawn	https://www.chipublib.org/locations/19/	41.782	-87.7034	NULL	STRUCT(url VARCHAR, description VARCHAR)
+Chinatown	https://www.chipublib.org/locations/20/	41.8541	-87.632	NULL	STRUCT(url VARCHAR, description VARCHAR)
+
+query TT
+SELECT branch_, zip FROM socrata.main.dataset('data.cityofchicago.org', 'x8fc-8rcq') WHERE branch_ LIKE 'Al%' ORDER BY 1;
+----
+Albany Park	60625
+Altgeld	60827
+
+# IS NULL on a STRUCT column is pushed too.
+query I
+SELECT count(*) FROM socrata.main.dataset('data.cityofchicago.org', 'x8fc-8rcq') WHERE website IS NULL;
+----
+0
+
+query I
+SELECT count(*) FROM socrata.main.dataset('data.cityofchicago.org', 'x8fc-8rcq');
+----
+82
+
+# An EU portal: number = 20240102 (unquoted), text = 'TESLA'
+query TTI
+SELECT handelsbenaming, eerste_kleur, count(*) AS n FROM socrata.main.dataset('opendata.rdw.nl', 'm9d7-ebf2')
+WHERE merk = 'TESLA' AND datum_eerste_toelating = 20240102 GROUP BY ALL ORDER BY n DESC, 1, 2;
+----
+MODEL X	WIT	1
+
+# ---------------------------------------------------------------- soql(): server-side aggregates
+
+# $query=... LIMIT 10001 (appended: the query had no LIMIT); types from X-SODA2-Types.
+query TI
+SELECT borough, requests::BIGINT FROM socrata.main.soql('data.cityofnewyork.us', 'erm2-nwe9',
+  'SELECT borough, count(*) AS requests WHERE created_date >= ''2024-01-01T00:00:00'' AND created_date < ''2024-01-02T00:00:00'' GROUP BY borough ORDER BY borough')
+ORDER BY borough;
+----
+BRONX	1362
+BROOKLYN	2284
+MANHATTAN	1494
+QUEENS	1887
+STATEN ISLAND	237
+Unspecified	5
 
 query TI
-SELECT category, count(*) FROM socrata.main.fetch_items('{SOCRATA_MOCK_API}') GROUP BY category ORDER BY category;
+SELECT primary_type, arrests::BIGINT FROM socrata.main.soql('data.cityofchicago.org', 'ijzp-q8t2',
+  'SELECT primary_type, count(*) AS arrests WHERE arrest = true AND date >= ''2024-01-01T00:00:00'' AND date < ''2024-01-02T00:00:00'' GROUP BY primary_type ORDER BY arrests DESC, primary_type LIMIT 5')
+ORDER BY arrests DESC, primary_type;
 ----
-hardware	8
-service	8
-software	9
+BATTERY	43
+WEAPONS VIOLATION	20
+NARCOTICS	16
+OTHER OFFENSE	10
+THEFT	8
 
-# The harness runs SOCRATA_MOCK_API with MOCK_API_FLAKY=1: every page answers
-# 429 + Retry-After once, so every query above also exercised the retry path.
+query TTT
+SELECT column_name, column_type, "null" FROM (DESCRIBE SELECT * FROM socrata.main.soql('data.cityofchicago.org', 'ijzp-q8t2',
+  'SELECT date_trunc_ym(date) AS month, max(date) AS latest, count(*) WHERE date >= ''2024-01-01T00:00:00'' AND date < ''2024-03-01T00:00:00'' GROUP BY month ORDER BY month'));
+----
+month	TIMESTAMP	YES
+latest	TIMESTAMP	YES
+count	DECIMAL(28,10)	YES
 
-# SOCRATA_MOCK_API_AUTH requires a bearer token ('test-token'). Every language's
-# fetch_items must put the HTTP status code in its error message.
+query TTI
+SELECT month, latest, count::BIGINT FROM socrata.main.soql('data.cityofchicago.org', 'ijzp-q8t2',
+  'SELECT date_trunc_ym(date) AS month, max(date) AS latest, count(*) WHERE date >= ''2024-01-01T00:00:00'' AND date < ''2024-03-01T00:00:00'' GROUP BY month ORDER BY month');
+----
+2024-01-01 00:00:00	2024-01-31 23:53:00	19723
+2024-02-01 00:00:00	2024-02-29 23:49:00	19991
+
+# max_rows guards a query without LIMIT: 6 groups > max_rows 3 -> error, not truncation.
 statement error
-SELECT count(*) FROM socrata.main.fetch_items('{SOCRATA_MOCK_API_AUTH}');
+SELECT * FROM socrata.main.soql('data.cityofnewyork.us', 'erm2-nwe9',
+  'SELECT borough, count(*) AS requests WHERE created_date >= ''2024-01-01T00:00:00'' AND created_date < ''2024-01-02T00:00:00'' GROUP BY borough ORDER BY borough', max_rows := 3);
 ----
-401
+<REGEX>:.*more than max_rows=3.*
 
-statement ok
-CREATE SECRET socrata_api_test (TYPE socrata_api, TOKEN 'test-token');
+# ---------------------------------------------------------------- catalog
 
-query I
-SELECT count(*) FROM socrata.main.fetch_items('{SOCRATA_MOCK_API_AUTH}', page_size := 25);
+query TTTT
+SELECT dataset_id, title, category, publisher FROM socrata.main.datasets('data.cityofnewyork.us', q := '311 service requests')
+ORDER BY page_views_last_month DESC, dataset_id LIMIT 5;
 ----
-25
+erm2-nwe9	311 Service Requests from 2020 to Present	Social Services	311
+ygpa-z7cr	Housing Maintenance Code Complaints and Problems	Housing & Development	Department of Housing Preservation & Development (HPD)
+76ig-c548	311 Service Requests from 2010 to 2019	Social Services	NULL
+cs9t-e3x8	311 Service Level Agreements	City Government	311
+5ijn-vbdv	311 Resolution Satisfaction Survey	City Government	Office of Technology and Innovation (OTI)
 
-# Several pages: the token must survive between batches (over HTTP each batch is a
-# separate request, so a token kept only in memory is lost after page 1).
-query I
-SELECT count(*) FROM socrata.main.fetch_items('{SOCRATA_MOCK_API_AUTH}', page_size := 7);
+query TTTTT
+SELECT portal, url, api_url, typeof(modified), typeof(tags) FROM socrata.main.datasets('data.cityofnewyork.us', q := '311 service requests')
+WHERE dataset_id = 'erm2-nwe9';
 ----
-25
+https://data.cityofnewyork.us	https://data.cityofnewyork.us/d/erm2-nwe9	https://data.cityofnewyork.us/resource/erm2-nwe9.json	TIMESTAMP WITH TIME ZONE	VARCHAR[]
 
-statement ok
-DROP SECRET socrata_api_test;
+# dataset_id IN (...) -> ids=erm2-nwe9&ids=ygpa-z7cr
+query TT
+SELECT dataset_id, asset_type FROM socrata.main.datasets('data.cityofnewyork.us') WHERE dataset_id IN ('erm2-nwe9', 'ygpa-z7cr') ORDER BY 1;
+----
+erm2-nwe9	dataset
+ygpa-z7cr	dataset
 
-# base_url must be http(s).
+# An EU portal: the US index answers "Domain not found", the EU index is asked instead.
+query TI
+SELECT category, count(*) AS datasets FROM socrata.main.datasets('opendata.rdw.nl') GROUP BY category ORDER BY datasets DESC, category;
+----
+Parkeren	32
+Typegoedkeuring	12
+Voertuigen	10
+Keuringen	5
+Terugroepacties	5
+Erkende bedrijven	2
+Product catalogus	1
+NULL	1
+
+query TT
+SELECT portal, dataset_id FROM socrata.main.search_datasets('police use of force', max_rows := 10) ORDER BY portal, dataset_id;
+----
+https://cos-data.seattle.gov	ppi5-g2bj
+https://data.cityofnewyork.us	dufe-vxb7
+https://data.cityofnewyork.us	f4tj-796d
+https://data.cityofnewyork.us	v5jd-6wqn
+https://data.nola.gov	9mnw-mbde
+https://data.nola.gov	a6bp-behb
+https://data.norfolk.gov	fcqe-uvnb
+https://data.ny.gov	ca8h-8gjq
+https://datahub.transportation.gov	hswt-qvr8
+https://opendata.howardcountymd.gov	aas5-u28t
+
+query TI
+SELECT portal, count(*) FROM socrata.main.search_datasets('voertuigen', region := 'eu', max_rows := 50) GROUP BY portal ORDER BY 2 DESC, 1;
+----
+https://opendata.rdw.nl	18
+
+query TTT
+SELECT field_name, data_type, duckdb_type FROM socrata.main.dataset_columns('data.cityofnewyork.us', 'erm2-nwe9')
+WHERE NOT is_system ORDER BY position LIMIT 3;
+----
+unique_key	text	VARCHAR
+created_date	calendar_date	TIMESTAMP
+closed_date	calendar_date	TIMESTAMP
+
+query TI
+SELECT data_type, count(*) AS columns FROM socrata.main.dataset_columns('data.cityofchicago.org', 'ijzp-q8t2')
+GROUP BY data_type ORDER BY columns DESC, data_type;
+----
+number	16
+text	10
+calendar_date	2
+checkbox	2
+location	1
+
+# ---------------------------------------------------------------- errors
+
 statement error
-SELECT * FROM socrata.main.fetch_items('ftp://example.com');
+SELECT * FROM socrata.main.dataset('data.cityofnewyork.us', 'erm2_nwe9');
 ----
 <REGEX>:.*
 
-# page_size is a named argument constrained to [1, 1000].
 statement error
-SELECT * FROM socrata.main.fetch_items('{SOCRATA_MOCK_API}', page_size := 0);
+SELECT * FROM socrata.main.dataset('data.cityofnewyork.us', 'zzzz-zzzz');
 ----
-<REGEX>:.*
+<REGEX>:.*HTTP 404.*
 
 statement error
-SELECT * FROM socrata.main.fetch_items('{SOCRATA_MOCK_API}', page_size := 5000);
+SELECT * FROM socrata.main.soql('data.cityofnewyork.us', 'erm2-nwe9', 'SELECT nonexistent_column');
 ----
-<REGEX>:.*
+<REGEX>:.*HTTP 400.*
+
+statement error
+SELECT * FROM socrata.main.datasets('example.com');
+----
+<REGEX>:.*does not know the domain.*
+
+# ---------------------------------------------------------------- SoQL helpers
+
+query T
+SELECT socrata.main.soql_quote('O''Brien');
+----
+'O''Brien'
+
+query T
+SELECT socrata.main.soql_quote(NULL);
+----
+NULL
+
+query T
+SELECT socrata.main.soql_quote('%' || socrata.main.soql_like_escape('50%_x') || '%');
+----
+'%50\\%\\_x%'

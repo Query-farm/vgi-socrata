@@ -1,0 +1,7 @@
+{
+ "request": "/resource/abcd-1234.json?%24limit=1000&%24order=%60%3Aid%60&%24select=%60permit%60%2C%60issued_at%60%2C%60fee%60%2C%60share%60%2C%60score%60%2C%60paid%60%2C%60contact%60%2C%60area%60%2C%60%3Aid%60",
+ "status": 200,
+ "content_type": "application/json",
+ "headers": {},
+ "body": "[{\"permit\": \"P-1\", \"issued_at\": \"2024-01-01T10:30:00.000Z\", \"fee\": \"125.50\", \"share\": \"12.5\", \"score\": 0.25, \"paid\": true, \"contact\": {\"phone_number\": \"555-0100\", \"phone_type\": \"Office\"}, \"area\": {\"type\": \"Polygon\", \"coordinates\": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}, \":id\": \"row-aaaa-0001\"}, {\"permit\": \"P-2\", \"issued_at\": \"2024-02-01T00:00:00.000Z\", \"fee\": \"99999999999999999999\", \"paid\": false, \":id\": \"row-aaaa-0002\"}]"
+}

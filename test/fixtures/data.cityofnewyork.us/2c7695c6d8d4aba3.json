@@ -1,0 +1,7 @@
+{
+ "request": "/resource/erm2-nwe9.json?%24query=SELECT+nonexistent_column+LIMIT+10001",
+ "status": 400,
+ "content_type": "application/json",
+ "headers": {},
+ "body": "{\"message\":\"Query coordinator error: query.soql.no-such-column; No such column: nonexistent_column; position: Map(row -> 1, column -> 8, line -> \\\"SELECT `nonexistent_column` LIMIT 10001\\\\n       ^\\\")\",\"errorCode\":\"query.soql.no-such-column\",\"data\":{\"column\":\"nonexistent_column\",\"dataset\":\"foxtrot.15655\",\"position\":{\"row\":1,\"column\":8,\"line\":\"SELECT `nonexistent_column` LIMIT 10001\\n       ^\"}}}"
+}

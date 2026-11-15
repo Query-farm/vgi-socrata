@@ -1,13 +1,9 @@
-"""Assemble the functions into a catalog and run the worker.
-
-To add a function: write it (see ``greet.py`` / ``sequence.py`` /
-``fetch_items.py``), then add the class to ``FUNCTIONS`` below.
+"""Assemble the Socrata functions into the ``socrata`` catalog and run the worker.
 
 Run it:
 
     vgi-socrata-worker                      # stdio: what DuckDB launches by default
     vgi-socrata-worker --http --port 8000   # HTTP: for Docker / hosted deploys
-    vgi-socrata-worker --help
 
 Attach it from DuckDB:
 
@@ -19,13 +15,16 @@ from __future__ import annotations
 import json
 from typing import Any
 
+import pyarrow as pa
 from vgi import Worker
-from vgi.catalog import Catalog, Schema
+from vgi.catalog import Catalog, Schema, SecretTypeSpec
 
-from .fetch_items import API_SECRET_TYPE, FetchItems
-from .greet import Greet, GreetWithStyle
+from .common import SECRET_BASE_URL_FIELD, SECRET_TOKEN_FIELD, SECRET_TYPE
+from .dataset import Dataset
+from .discovery import DatasetColumns, Datasets, SearchDatasets
+from .helpers import SoqlLikeEscape, SoqlQuote
 from .meta import (
-    CATALOG_DOC_MD,
+    CATALOG_COMMENT,
     CATALOG_NAME,
     CATALOG_TAGS,
     SCHEMA_CATEGORIES,
@@ -34,17 +33,42 @@ from .meta import (
     SOURCE_URL,
     keywords_array,
 )
-from .sequence import SequenceTable
+from .soql_query import Soql
 
-FUNCTIONS: list[type[Any]] = [Greet, GreetWithStyle, SequenceTable, FetchItems]
+FUNCTIONS: list[type[Any]] = [Datasets, SearchDatasets, DatasetColumns, Dataset, Soql, SoqlQuote, SoqlLikeEscape]
+
+# CREATE SECRET (TYPE socrata, APP_TOKEN '...', SCOPE 'https://data.cityofnewyork.us')
+SOCRATA_SECRET_TYPE = SecretTypeSpec(
+    name=SECRET_TYPE,
+    description="Socrata app token (and optional base_url) for the portal hosts in the secret's SCOPE.",
+    schema=pa.schema(
+        [
+            pa.field(
+                SECRET_TOKEN_FIELD,
+                pa.string(),
+                metadata={
+                    "redact": "true",
+                    "vgi_doc": "Socrata app token, sent as X-App-Token; raises the anonymous throttling limit.",
+                },
+            ),
+            pa.field(
+                SECRET_BASE_URL_FIELD,
+                pa.string(),
+                metadata={
+                    "vgi_doc": (
+                        "Send this host's requests to another base URL (a caching proxy, mirror or local fixture "
+                        "server) while results keep naming the real portal."
+                    ),
+                },
+            ),
+        ],
+        metadata={"vgi_doc_url": f"{SOURCE_URL}#app-tokens-and-secrets"},
+    ),
+)
 
 
 def _stamp_example_queries(functions: list[type[Any]]) -> list[dict[str, str]]:
-    """Publish each function's examples as ``vgi.example_queries`` (with descriptions).
-
-    Overloads share one SQL name, so their examples are merged per name.
-    Returns every example, for the schema-level list.
-    """
+    """Publish each function's examples as ``vgi.example_queries``; return them all for the schema."""
     by_name: dict[str, list[dict[str, str]]] = {}
     for fn in functions:
         bucket = by_name.setdefault(fn.Meta.name, [])
@@ -61,22 +85,22 @@ _ALL_EXAMPLES = _stamp_example_queries(FUNCTIONS)
 
 
 class SocrataWorker(Worker):
-    """The worker process: one catalog, one ``main`` schema."""
+    """The worker process: one ``socrata`` catalog, one ``main`` schema."""
 
     catalog = Catalog(
         name=CATALOG_NAME,
-        comment=CATALOG_DOC_MD,
+        comment=CATALOG_COMMENT,
         source_url=SOURCE_URL,
         tags=CATALOG_TAGS,
         schemas=[
             Schema(
                 path=["main"],
-                comment=SCHEMA_DOC_MD,
+                comment="Socrata catalog discovery, dataset rows and server-side SoQL.",
                 functions=FUNCTIONS,
                 tags={
                     "vgi.title": "Socrata Functions",
-                    "domain": "examples",
-                    "vgi.keywords": keywords_array("greeting, sequence, generator, rest api, pagination"),
+                    "domain": "open-data",
+                    "vgi.keywords": keywords_array("socrata, datasets, soql, soda, discovery api, open data"),
                     "vgi.doc_llm": SCHEMA_DOC_LLM,
                     "vgi.doc_md": SCHEMA_DOC_MD,
                     "vgi.categories": json.dumps(SCHEMA_CATEGORIES),
@@ -86,7 +110,7 @@ class SocrataWorker(Worker):
         ],
     )
 
-    secret_types = [API_SECRET_TYPE]
+    secret_types = [SOCRATA_SECRET_TYPE]
 
 
 def main() -> None:

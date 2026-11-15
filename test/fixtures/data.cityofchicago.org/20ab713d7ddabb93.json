@@ -1,0 +1,10 @@
+{
+ "request": "/resource/ijzp-q8t2.json?%24limit=3&%24order=%60ward%60+DESC%2C%60%3Aid%60&%24select=%60id%60%2C%60ward%60&%24where=%60ward%60+IS+NOT+NULL",
+ "status": 200,
+ "content_type": "application/json;charset=utf-8",
+ "headers": {
+  "x-soda2-fields": "[\"id\",\"ward\"]",
+  "x-soda2-types": "[\"number\",\"number\"]"
+ },
+ "body": "[{\"id\":\"9377133\",\"ward\":\"50\"}\n,{\"id\":\"9873131\",\"ward\":\"50\"}\n,{\"id\":\"10391981\",\"ward\":\"50\"}]\n"
+}

@@ -1,0 +1,10 @@
+{
+ "request": "/resource/ijzp-q8t2.json?%24query=SELECT+primary_type%2C+count%28%2A%29+AS+arrests+WHERE+arrest+%3D+true+AND+date+%3E%3D+%272024-01-01T00%3A00%3A00%27+AND+date+%3C+%272024-01-02T00%3A00%3A00%27+GROUP+BY+primary_type+ORDER+BY+arrests+DESC%2C+primary_type+LIMIT+5",
+ "status": 200,
+ "content_type": "application/json;charset=utf-8",
+ "headers": {
+  "x-soda2-fields": "[\"primary_type\",\"arrests\"]",
+  "x-soda2-types": "[\"text\",\"number\"]"
+ },
+ "body": "[{\"primary_type\":\"BATTERY\",\"arrests\":\"43\"}\n,{\"primary_type\":\"WEAPONS VIOLATION\",\"arrests\":\"20\"}\n,{\"primary_type\":\"NARCOTICS\",\"arrests\":\"16\"}\n,{\"primary_type\":\"OTHER OFFENSE\",\"arrests\":\"10\"}\n,{\"primary_type\":\"THEFT\",\"arrests\":\"8\"}]\n"
+}

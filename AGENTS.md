@@ -24,12 +24,16 @@ Faster loops while iterating: `make test-unit`, `make test-sql`, `make lint-expl
 src/socrata_worker/
   worker.py        # assembles the catalog; add new functions to FUNCTIONS
   meta.py          # catalog/schema metadata + helpers (object_tags, column)
-  greet.py         # scalar example (overloads, ConstParam choices)
-  sequence.py      # table function example (named args, streaming state)
-  fetch_items.py   # REST API table function (pagination, retries, secrets)
+  client.py        # HTTP: portal URLs, retries/backoff on 429/5xx, error messages
+  common.py        # scoped `socrata` secrets (app_token, base_url) and client construction
+  soql.py          # Socrata types -> Arrow/DuckDB, value conversion, filter -> SoQL $where
+  dataset.py       # dataset(): typed rows with $select/$where/Top-N pushdown, :id keyset paging
+  discovery.py     # datasets(), search_datasets() (Discovery API, US/EU), dataset_columns()
+  soql_query.py    # soql(): server-side SoQL queries with typed results
+  helpers.py       # soql_quote(), soql_like_escape() scalars
 tests/             # pytest unit tests (in-process client)
 test/sql/          # sqllogictest files run through DuckDB
-test/mock_api/     # offline mock of the REST API used by tests
+test/mock_api/     # strict replay server for the recorded fixtures in test/fixtures/
 examples/          # recipes: pushdown, caching, catalog tables, aggregates, COPY …
 ci/                # integration harness used by `make test-sql` and CI
 scripts/           # vgi_template.py (init / template-diff)
