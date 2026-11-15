@@ -63,7 +63,7 @@ def put(path: str, params: dict[str, str], body: object) -> None:
     data = {"request": key, "status": 200, "content_type": "application/json", "headers": {}, "body": json.dumps(body)}
     f = fixture_file(ALIAS, key)
     f.parent.mkdir(parents=True, exist_ok=True)
-    f.write_text(json.dumps(data, indent=1) + "\n")
+    f.write_text(json.dumps(data, indent=1) + "\n", encoding="utf-8")
     print(f"{key} -> {f.relative_to(FIXTURES)}", file=sys.stderr)
 
 
