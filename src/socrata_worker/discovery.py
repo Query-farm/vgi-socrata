@@ -56,7 +56,9 @@ log = logging.getLogger(__name__)
 
 LIST = pa.list_(pa.string())
 KV_LIST = pa.list_(pa.struct([pa.field("key", pa.string()), pa.field("value", pa.string())]))
+
 PAGE = 100
+ASSET_TYPES = ("dataset", "map", "chart", "filter", "file", "href", "story", "measure", "all")
 MAX_OFFSET = 10_000  # the Discovery API's offset + limit ceiling
 
 _REGION_CACHE = TtlCache(ttl=3600.0, max_items=256)
@@ -301,6 +303,7 @@ class DatasetsArgs:
             "asset_type",
             default="dataset",
             doc="Asset type to list: 'dataset' (default), 'map', 'chart', 'filter', 'file', 'href', or 'all'.",
+            choices=ASSET_TYPES,
         ),
     ]
     region: Annotated[
@@ -404,7 +407,12 @@ class SearchArgs:
     tag: Annotated[str | None, Arg("tag", default=None, doc="Only datasets with this tag.")]
     asset_type: Annotated[
         str,
-        Arg("asset_type", default="dataset", doc="Asset type: 'dataset' (default), 'map', 'chart', ..., or 'all'."),
+        Arg(
+            "asset_type",
+            default="dataset",
+            doc="Asset type: 'dataset' (default), 'map', 'chart', ..., or 'all'.",
+            choices=ASSET_TYPES,
+        ),
     ]
     region: Annotated[
         str,

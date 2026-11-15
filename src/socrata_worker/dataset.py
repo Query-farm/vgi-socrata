@@ -6,7 +6,8 @@ system ``:id``).
 
 How a scan reads (chosen on the first ``process`` call and frozen in the state):
 
-* ``count``   no columns are needed (``count(*)``): one ``$select=count(*)`` request.
+* ``count``   no columns are needed at all: one ``$select=count(*)`` request. (DuckDB
+  usually still projects one column for ``count(*)``, which then reads that column.)
 * ``topn``    DuckDB pushed ``ORDER BY <number/timestamp column> LIMIT n``
   (n <= 50,000): ``$order=<col> <dir>, :id`` with ``$limit``/``$offset`` up to n rows,
   non-null values first (or last, per ``NULLS FIRST``) via two ``$where`` phases.
@@ -343,7 +344,7 @@ class Dataset(TableFunctionGenerator[DatasetArgs, ScanState]):
                     "state, zip)`, url `STRUCT(url, description)`, text and others `VARCHAR`. "
                     "Selected columns become SoQL `$select`; WHERE filters (= <> IN IS NULL starts_with on text; "
                     "ranges on numbers and timestamps; = on checkbox) become `$where`; ORDER BY <number or "
-                    "timestamp column> LIMIT n is sorted and limited by the portal; count(*) is one request. "
+                    "timestamp column> LIMIT n (with no WHERE) is sorted and limited by the portal. "
                     "Rows are paged with a keyset cursor on :id (page_rows := rows per request, default 1000), so "
                     "filter first on big datasets. soql_where := adds a raw SoQL condition (within_circle, like, "
                     "cross-column OR). For server-side GROUP BY use soql()."
@@ -351,7 +352,7 @@ class Dataset(TableFunctionGenerator[DatasetArgs, ScanState]):
                 doc_md=(
                     "## dataset(portal, dataset_id, soql_where :=, page_rows :=)\n\n"
                     "All rows of a dataset, with columns typed from its metadata.\n\n"
-                    "**Pushdown.** Projections, filters, `count(*)` and `ORDER BY ... LIMIT n` on numeric and "
+                    "**Pushdown.** Projections, filters and `ORDER BY ... LIMIT n` (without `WHERE`) on numeric and "
                     "timestamp columns run on the portal as SoQL. Paging uses a keyset cursor on the system `:id` "
                     "column (never deep `$offset`), carried in the scan state so long scans resume."
                 ),

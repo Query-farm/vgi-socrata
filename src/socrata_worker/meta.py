@@ -88,18 +88,17 @@ CATALOG_COMMENT = (
 CATALOG_DOC_LLM = (
     "Query any Socrata (Tyler Data & Insights) open-data portal through its SODA 2.1 API: thousands of US "
     "state, county and city portals such as data.cityofnewyork.us, data.cityofchicago.org, data.wa.gov and "
-    "data.cdc.gov, and European ones such as opendata.rdw.nl. Every dataset has a four-by-four id such as "
-    "'erm2-nwe9' (the end of its page URL). Every function takes the portal (a domain such as "
-    "'data.cityofnewyork.us', or a URL) as its first argument, and most take the dataset id. Typical flow: "
-    "find datasets on a portal with datasets(portal, q := ...) (or across every portal with "
-    "search_datasets(q)), inspect a dataset's field names and types with dataset_columns(portal, id), then "
-    "read rows with dataset(portal, id) and ordinary SQL: WHERE filters, selected columns, count(*) and "
-    "ORDER BY <number or timestamp> LIMIT n are translated into SoQL so only matching rows travel, and rows "
-    "are paged with a keyset cursor on the system :id column. For GROUP BY summaries of big datasets send a "
-    "SoQL query to the portal with soql(portal, id, 'SELECT ... GROUP BY ...'). Column types are real DuckDB "
-    "types: numbers `DECIMAL(28,10)`, calendar dates `TIMESTAMP`, checkboxes `BOOLEAN`, points GeoJSON `JSON`, "
-    "locations and URLs `STRUCT`. Public data needs no credentials; an app token raises the throttling "
-    "limit and is given as a secret scoped to the portal:\n\n"
+    "data.cdc.gov, and European ones such as opendata.rdw.nl. Key concepts: a portal is identified by its "
+    "domain (or URL); every dataset has a four-by-four id such as 'erm2-nwe9' (the end of its page URL); "
+    "columns have a field name (used in SQL and SoQL) that often differs from the display name. Reach for "
+    "it to find public government datasets (on one portal or across all portals of a region), learn their "
+    "columns, and read or summarize their rows. Ordinary SQL filters, column selection and ORDER BY "
+    "<number or timestamp> LIMIT n run on the portal as SoQL, so only matching rows travel; rows are paged "
+    "with a resumable keyset cursor on the system :id column. Big GROUP BY summaries should be sent to the "
+    "portal as a SoQL query instead of downloading rows. Column types are real DuckDB types: numbers "
+    "`DECIMAL(28,10)`, calendar dates `TIMESTAMP`, checkboxes `BOOLEAN`, points GeoJSON `JSON`, locations "
+    "and URLs `STRUCT`. Public data needs no credentials; an app token raises the throttling limit and is "
+    "given as a secret scoped to the portal:\n\n"
     "```sql\nCREATE SECRET (TYPE socrata, APP_TOKEN '...', SCOPE 'https://data.cityofnewyork.us');\n```\n\n"
     "Catalog columns portal, dataset_id, title, description, publisher, modified and url match the CKAN and "
     "Opendatasoft workers so catalogs from several portal platforms can be combined with UNION ALL BY NAME."
@@ -116,14 +115,13 @@ CATALOG_DOC_MD = (
 )
 
 SCHEMA_DOC_LLM = (
-    "The `main` schema holds every function. Catalog: datasets(portal, q :=, category :=, tag :=) lists one "
-    "portal's datasets from the Discovery API; search_datasets(q, region :=) searches every US (or EU) "
-    "portal; dataset_columns(portal, dataset_id) lists field names and types. Data: dataset(portal, "
-    "dataset_id, soql_where :=, page_rows :=) reads typed rows with SoQL pushdown; soql(portal, dataset_id, "
-    "query) runs a full SoQL SELECT/GROUP BY on the portal. SoQL helpers: soql_quote(value) and "
-    "soql_like_escape(text) build safe hand-written SoQL. `portal` is a domain such as "
-    "'data.cityofnewyork.us'; dataset ids are four-by-fours such as 'erm2-nwe9'. Look up field names before "
-    "filtering (display names differ from field names); filter in SQL so the portal does the work."
+    "Everything for Socrata portals lives in this one schema, in three groups: catalog discovery (the "
+    "Discovery API's dataset listings for one portal or a federated search, and a dataset's column "
+    "metadata), data access (typed rows with SoQL pushdown, and full server-side SoQL queries for "
+    "aggregates), and helpers that quote values for hand-written SoQL. Every portal-facing function takes "
+    "the portal domain first (e.g. 'data.cityofnewyork.us') and, for a dataset, its four-by-four id. "
+    "Look up field names before filtering (display names differ from field names); filter in SQL so the "
+    "portal does the work; for GROUP BY over millions of rows let the portal aggregate."
 )
 
 SCHEMA_DOC_MD = (
@@ -163,6 +161,25 @@ AGENT_TEST_TASKS = [
         "prompt": (
             "What Socrata data type does the column created_date have in dataset erm2-nwe9 on data.cityofnewyork.us?"
         ),
+    },
+    {
+        "name": "nyc_311_borough_counts",
+        "prompt": (
+            "Count NYC 311 service requests (dataset erm2-nwe9 on data.cityofnewyork.us) per borough for "
+            "1 January 2024 (created_date from 2024-01-01T00:00:00 inclusive to 2024-01-02T00:00:00 exclusive), "
+            "letting the portal do the counting. How many came from BROOKLYN?"
+        ),
+    },
+    {
+        "name": "use_of_force_portals",
+        "prompt": (
+            "Search every US Socrata portal for 'police use of force' datasets (first 10 results). Which "
+            "portal domains appear?"
+        ),
+    },
+    {
+        "name": "like_escape_pattern",
+        "prompt": "Escape the text 100%_done so it matches literally inside a SoQL like pattern.",
     },
     {
         "name": "quote_literal",

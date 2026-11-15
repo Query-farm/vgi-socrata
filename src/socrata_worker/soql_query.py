@@ -169,14 +169,16 @@ class Soql(TableFunctionGenerator[SoqlArgs, SoqlState]):
                 keywords="socrata, soql, aggregate, group by, count, sum, server-side, analytics, $query",
                 doc_llm=(
                     "Run a full SoQL query on the portal and return its rows, typed. Arguments: the portal, the "
-                    "dataset_id (four-by-four) and a SoQL query without FROM: SELECT ... WHERE ... GROUP BY ... "
-                    "HAVING ... ORDER BY ... LIMIT .... SoQL string literals use single quotes; timestamps compare "
-                    "as text literals like '2024-01-01T00:00:00'; useful functions: count(*), sum, avg, min, max, "
-                    "date_trunc_y/ym/ymd(ts), upper, starts_with, within_circle(location, lat, lon, meters). Result "
-                    "columns are named by alias (count(*) without an alias is 'count') and typed from the portal's "
-                    "own type report (numbers DECIMAL(28,10), timestamps TIMESTAMP, text VARCHAR). Without LIMIT the "
-                    "query may return at most max_rows (default 10,000) rows, otherwise it fails. Use it to summarize "
-                    "huge datasets in one request instead of reading every row with dataset()."
+                    "dataset_id (four-by-four) and a SoQL query, which is like a SQL query without a FROM clause, "
+                    "for example:\n\n```sql\nSELECT borough, count(*) AS n WHERE created_date >= "
+                    "'2024-01-01T00:00:00' GROUP BY borough\n```\n\n"
+                    "SoQL string literals use single quotes; timestamps compare with text literals such as "
+                    "'2024-01-01T00:00:00'; useful functions include count, sum, avg, min, max, date_trunc_ym, "
+                    "upper, starts_with and within_circle. Result columns are named by alias (an unaliased count "
+                    "is 'count') and typed from the portal's own type report (numbers `DECIMAL(28,10)`, timestamps "
+                    "`TIMESTAMP`, text `VARCHAR`). A query without a limit may return at most max_rows (default "
+                    "10,000) rows, otherwise it fails. Use it to summarize huge datasets in one request instead of "
+                    "reading every row with dataset()."
                 ),
                 doc_md=(
                     "## soql(portal, dataset_id, query, max_rows :=)\n\n"

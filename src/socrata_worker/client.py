@@ -21,6 +21,7 @@ import contextlib
 import json
 import logging
 import re
+import ssl
 import threading
 import time
 import urllib.error
@@ -30,6 +31,8 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any
 
+import certifi
+
 log = logging.getLogger(__name__)
 
 TIMEOUT_SECONDS = 60.0
@@ -38,6 +41,16 @@ MAX_RETRY_DELAY = 60.0
 USER_AGENT = "vgi-socrata-worker/0.1 (+https://query.farm)"
 
 DISCOVERY_HOSTS = {"us": "https://api.us.socrata.com", "eu": "https://api.eu.socrata.com"}
+
+
+def _tls_context() -> ssl.SSLContext:
+    """System trust store plus certifi's CA bundle (uv-managed Pythons ship without system CAs)."""
+    ctx = ssl.create_default_context()
+    ctx.load_verify_locations(cafile=certifi.where())
+    return ctx
+
+
+_TLS = _tls_context()
 
 _HOST_RE = re.compile(r"^[A-Za-z0-9.-]+(:\d+)?(/.*)?$")
 FOUR_BY_FOUR_RE = re.compile(r"^[a-z0-9]{4}-[a-z0-9]{4}$")
@@ -182,7 +195,7 @@ class SocrataClient:
         for attempt in range(1, MAX_ATTEMPTS + 1):
             request = urllib.request.Request(url, headers=self._headers())
             try:
-                with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+                with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS, context=_TLS) as response:
                     raw = response.read()
                     headers = {k.lower(): v for k, v in response.headers.items()}
                 try:
@@ -201,8 +214,10 @@ class SocrataClient:
                 log.info("HTTP %s from %s; retrying in %.1fs", err.code, shown, delay)
                 time.sleep(delay)
             except (urllib.error.URLError, TimeoutError, ConnectionError) as err:
+                reason = getattr(err, "reason", err)
+                if isinstance(reason, ssl.SSLCertVerificationError):
+                    raise SocrataError(f"GET {shown} failed: TLS certificate verification failed: {reason}") from err
                 if attempt == MAX_ATTEMPTS:
-                    reason = getattr(err, "reason", err)
                     raise SocrataError(f"GET {shown} failed: {reason}") from err
                 time.sleep(min(0.5 * 2**attempt, MAX_RETRY_DELAY))
         raise AssertionError("unreachable")

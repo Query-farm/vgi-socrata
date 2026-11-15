@@ -135,7 +135,11 @@ def duckdb_type_name(t: pa.DataType) -> str:
     if t == PHONE_TYPE:
         return "STRUCT(phone_number VARCHAR, phone_type VARCHAR)"
     if pa.types.is_list(t):
-        return "VARCHAR[]"
+        value = t.value_type
+        if pa.types.is_struct(value):
+            inner = ", ".join(f"{f.name} {duckdb_type_name(f.type)}" for f in value)
+            return f"STRUCT({inner})[]"
+        return f"{duckdb_type_name(value)}[]"
     return "VARCHAR"
 
 

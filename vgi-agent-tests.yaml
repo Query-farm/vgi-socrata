@@ -20,3 +20,13 @@ tasks:
       WHERE field_name = 'created_date'
   - name: quote_literal
     reference_sql: SELECT socrata.main.soql_quote('O''Brien') AS literal
+  - name: nyc_311_borough_counts
+    check_sql: >-
+      SELECT requests::BIGINT = 2284 FROM socrata.main.soql('data.cityofnewyork.us', 'erm2-nwe9',
+        'SELECT borough, count(*) AS requests WHERE created_date >= ''2024-01-01T00:00:00''
+         AND created_date < ''2024-01-02T00:00:00'' GROUP BY borough') WHERE borough = 'BROOKLYN'
+  - name: use_of_force_portals
+    check_sql: >-
+      SELECT count(DISTINCT portal) >= 3 FROM socrata.main.search_datasets('police use of force', max_rows := 10)
+  - name: like_escape_pattern
+    reference_sql: SELECT socrata.main.soql_like_escape('100%_done') AS pattern
