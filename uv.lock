@@ -966,11 +966,11 @@ http = [
 
 [[package]]
 name = "vgi-socrata-worker"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "certifi" },
-    { name = "vgi-python", extra = ["http"] },
+    { name = "vgi-python", extra = ["haybarn", "http"] },
 ]
 
 [package.dev-dependencies]
@@ -985,7 +985,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "certifi", specifier = ">=2024.2.2" },
-    { name = "vgi-python", extras = ["http"], specifier = ">=0.51.1,<0.52" },
+    { name = "vgi-python", extras = ["http", "haybarn"], specifier = ">=0.51.1,<0.52" },
 ]
 
 [package.metadata.requires-dev]
