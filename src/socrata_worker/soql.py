@@ -191,7 +191,7 @@ def _to_float(value: Any) -> float | None:
         return None
     try:
         f = float(value)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
     return f if math.isfinite(f) else None
 

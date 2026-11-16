@@ -120,7 +120,7 @@ back, rather than truncating silently.
 
 ## Install
 
-Python 3.13+ and [uv](https://docs.astral.sh/uv/). Run the worker straight from a release tag
+Python 3.14+ and [uv](https://docs.astral.sh/uv/). Run the worker straight from a release tag
 (workers are not published to PyPI):
 
 ```sql
