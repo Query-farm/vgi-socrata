@@ -127,7 +127,7 @@ Python 3.14+ and [uv](https://docs.astral.sh/uv/). Run the worker straight from 
 INSTALL vgi FROM community;
 LOAD vgi;
 ATTACH 'socrata' (TYPE vgi,
-  LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-socrata@v0.1.1 vgi-socrata-worker');
+  LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-socrata@v0.1.2 vgi-socrata-worker');
 ```
 
 From a checkout: `make build`, then `LOCATION '/abs/path/to/vgi-socrata/.venv/bin/vgi-socrata-worker'`.

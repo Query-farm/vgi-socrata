@@ -1,6 +1,6 @@
 [project]
 name = "vgi-socrata-worker"
-version = "0.1.1"
+version = "0.1.2"
 description = "Any Socrata (Tyler Data & Insights) open-data portal as DuckDB SQL, with SoQL pushdown."
 readme = "README.md"
 license = "0BSD"
@@ -10,7 +10,7 @@ dependencies = [
     "certifi>=2024.2.2",
     # [http] adds the HTTP transport (`--http`) used by Docker deploys.
     # SDK bumps go through the template (minor bumps can raise the protocol).
-    "vgi-python[http,haybarn]>=0.52.0,<0.53",
+    "vgi-python[http,haybarn]>=0.52.2,<0.53",
 ]
 
 [project.scripts]
@@ -20,7 +20,7 @@ vgi-socrata-worker = "socrata_worker.worker:main"
 dev = [
     # The pushdown recipe evaluates predicates locally; a worker that uses filter
     # pushdown must add the `haybarn` extra to its own dependencies.
-    "vgi-python[haybarn]>=0.52.0,<0.53",
+    "vgi-python[haybarn]>=0.52.2,<0.53",
     "pytest>=8.4",
     "mypy>=1.18",
     "ruff>=0.14",
