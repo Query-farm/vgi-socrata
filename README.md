@@ -127,12 +127,14 @@ Python 3.14+ and [uv](https://docs.astral.sh/uv/). Run the worker straight from 
 INSTALL vgi FROM community;
 LOAD vgi;
 ATTACH 'socrata' (TYPE vgi,
-  LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-socrata@v0.1.2 vgi-socrata-worker');
+  LOCATION 'uvx --from git+https://github.com/Query-farm/vgi-socrata@v0.2.0 vgi-socrata-worker');
 ```
 
 From a checkout: `make build`, then `LOCATION '/abs/path/to/vgi-socrata/.venv/bin/vgi-socrata-worker'`.
 Hosted: `vgi-socrata-worker --http --port 8000` (or the Dockerfile), then
 `ATTACH 'socrata' (TYPE vgi, LOCATION 'https://your-host')`.
+
+vgi-socrata 0.2.0 speaks VGI protocol 3.4, so it needs Haybarn 2.0.1 or newer (Haybarn 2.0.0 loads a 3.3 `vgi` extension that cannot attach it).
 
 ## Examples
 
